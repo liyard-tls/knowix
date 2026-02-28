@@ -15,6 +15,7 @@ import { useUserContext } from '@/context'
 import { sendChatMessage, generateExamples, type ChatMessage, type CodeExample } from '@/actions/chat.actions'
 import { calculateXP } from '@/config/gamification'
 import { AppShell } from '@/components/layout'
+import { CodeBlock } from '@/components/atoms'
 import { cn } from '@/lib/cn'
 import type { EvaluationResult } from '@/types'
 
@@ -34,14 +35,14 @@ function MarkdownContent({ content, className }: { content: string; className?: 
             <em className="text-[var(--accent)] not-italic font-medium">{children}</em>
           ),
           code: ({ children, className: cls }) => {
-            const isBlock = cls?.includes('language-')
-            if (isBlock) {
+            const langMatch = cls?.match(/language-(\S+)/)
+            if (langMatch) {
               return (
-                <pre className="my-3 rounded-[var(--radius-md)] bg-[var(--bg-base)] border border-[var(--border)] overflow-x-auto">
-                  <code className="block p-3 text-xs leading-relaxed font-mono text-[var(--text-secondary)] whitespace-pre">
-                    {String(children).replace(/\n$/, '')}
-                  </code>
-                </pre>
+                <CodeBlock
+                  code={String(children).replace(/\n$/, '')}
+                  lang={langMatch[1]}
+                  className="my-3"
+                />
               )
             }
             return (
@@ -157,11 +158,11 @@ function ExamplesTab({
                 className="overflow-hidden"
               >
                 <div className="border-t border-[var(--border)]">
-                  <pre className="overflow-x-auto bg-[var(--bg-base)]">
-                    <code className="block px-4 py-3 text-xs leading-relaxed font-mono text-[var(--text-secondary)] whitespace-pre">
-                      {ex.code}
-                    </code>
-                  </pre>
+                  <CodeBlock
+                    code={ex.code}
+                    lang={ex.language}
+                    className="rounded-none border-0 border-t-0"
+                  />
                 </div>
               </motion.div>
             )}
@@ -525,11 +526,11 @@ export default function QuestionPage() {
                             />
 
                             {msg.evaluation.codeExample && (
-                              <pre className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-base)] border border-[var(--border)] overflow-x-auto">
-                                <code className="block p-3 text-xs leading-relaxed font-mono text-[var(--text-secondary)] whitespace-pre">
-                                  {msg.evaluation.codeExample}
-                                </code>
-                              </pre>
+                              <CodeBlock
+                                code={msg.evaluation.codeExample}
+                                lang="typescript"
+                                className="mt-3"
+                              />
                             )}
 
                             <div className="flex items-center gap-2 mt-4">
