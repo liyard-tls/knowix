@@ -54,45 +54,85 @@ Return ONLY a valid JSON array, no markdown, no explanation:
 `.trim(),
 
   /**
-   * Оцінює відповідь юзера на питання.
-   * Враховує контекст попереднього чату.
-   * Повертає JSON з оцінкою та зворотним зв'язком.
+   * Основний промпт чату. Два режими в одному:
+   * 1. Якщо юзер ще не дав відповіді — продовжуй розмову, уточнюй, підказуй напрямок
+   * 2. Якщо відповідь дана і вказано forceEvaluate=true, або якщо відповідь досить повна — оціни
+   *
+   * При оцінці повертає JSON-блок. При звичайній відповіді — markdown текст.
+   */
+  chat: (
+    question: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }>,
+    forceEvaluate: boolean
+  ) => {
+    const historyText = history
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n')
+
+    return `You are evaluating a learner's understanding of this interview question:
+"${question}"
+
+Conversation so far:
+${historyText || '(no messages yet)'}
+
+${forceEvaluate
+  ? `The user has explicitly requested evaluation. Evaluate their answer now.`
+  : `Decide: does the user's latest message contain a substantive answer to the question?
+- If YES (they attempted to answer): evaluate it.
+- If NO (they asked a follow-up, want clarification, or are continuing discussion): reply conversationally in markdown.`
+}
+
+When evaluating, return ONLY this JSON (no markdown wrapper, no explanation):
+{"EVAL":{"status":"correct"|"partial"|"incorrect","score":<0-100>,"feedback":"<markdown: use **bold** for key points, bullet lists, short code snippets>","codeExample":"<code string or null>"}}
+
+Evaluation guidelines:
+- "correct" = 80-100: covers key concepts well
+- "partial" = 40-79: good points but missing important aspects
+- "incorrect" = 0-39: fundamentally wrong or very incomplete
+- Feedback: use **bold** for important terms, bullet points for multiple items, inline \`code\` for identifiers
+- codeExample: concise illustrative code (under 20 lines), or null
+
+When NOT evaluating, respond in markdown with clear structure:
+- Use **bold** for key terms
+- Use \`inline code\` for identifiers, types, methods
+- Use bullet lists for multiple points
+- Be concise but thorough`.trim()
+  },
+
+  /**
+   * Явна оцінка без контексту (використовується тільки якщо треба re-evaluate).
    */
   evaluateAnswer: (question: string, answer: string) => `
 Question: "${question}"
 
 User's answer: "${answer}"
 
-Evaluate this answer and return ONLY valid JSON, no markdown:
-{
-  "status": "correct" | "partial" | "incorrect",
-  "score": <number 0-100>,
-  "feedback": "<concise feedback: what's correct, what's missing or wrong>",
-  "codeExample": "<relevant code example if applicable, otherwise null>"
-}
+Evaluate and return ONLY valid JSON, no markdown wrapper:
+{"EVAL":{"status":"correct"|"partial"|"incorrect","score":<0-100>,"feedback":"<markdown feedback>","codeExample":"<code or null>"}}
 
-Guidelines:
-- "correct" = score 80-100, answer covers the key concepts well
-- "partial" = score 40-79, answer has good points but misses important aspects
-- "incorrect" = score 0-39, answer is fundamentally wrong or very incomplete
-- Keep feedback under 150 words
-- Code examples should be short and illustrative (under 20 lines)
+- "correct" = 80-100, "partial" = 40-79, "incorrect" = 0-39
+- Feedback: use **bold** for key points, bullet lists, inline \`code\`
+- codeExample: under 20 lines or null
 `.trim(),
 
   /**
-   * Генерує розгорнутий приклад коду за темою питання.
-   * Використовується на вкладці "Приклади".
+   * Генерує кілька прикладів коду для вкладки Examples.
+   * Повертає JSON масив прикладів з назвою, поясненням і кодом.
    */
-  generateExample: (question: string, language: string = 'C#') => `
-Provide a practical code example for the following interview question:
-"${question}"
+  generateExamples: (question: string) => `
+For this interview question: "${question}"
 
-Requirements:
-- Language: ${language}
-- Show a real-world, working implementation (not toy examples)
-- Add brief comments explaining key parts
-- Keep it under 40 lines
+Generate 3 practical code examples that help understand the concept.
+Each example should show a different angle: basic usage, real-world scenario, common pitfall or edge case.
 
-Return ONLY the code, no explanation before or after.
+Return ONLY valid JSON, no markdown wrapper:
+[
+  {
+    "title": "short title (3-5 words)",
+    "language": "language name (e.g. C#, TypeScript, Go)",
+    "explanation": "1-2 sentences explaining what this example demonstrates",
+    "code": "the code (under 30 lines, well-commented)"
+  }
+]
 `.trim(),
 } as const
