@@ -316,7 +316,7 @@ export default function QuestionPage() {
             status: response.evaluation.status,
             score: response.evaluation.score,
             feedback: response.evaluation.feedback,
-            codeExample: response.evaluation.codeExample ?? null,
+            codeExample: response.evaluation.codeExample ?? undefined,
           }
         : undefined
 
