@@ -1,14 +1,16 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AI_CONFIG, GEMINI_MODEL_CHAIN, type GeminiModel } from '@/config/ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
 /**
  * Returns a Gemini model instance for a given model name.
  * systemInstruction — mode-specific persona (tech/language/general).
+ * apiKey — optional per-user key; falls back to GEMINI_API_KEY env var.
  * Model selection and fallback logic is handled in Server Actions (gemini.actions.ts).
  */
-export function getGeminiModel(model: GeminiModel, systemInstruction?: string) {
+export function getGeminiModel(model: GeminiModel, systemInstruction?: string, apiKey?: string) {
+  const key = apiKey ?? process.env.GEMINI_API_KEY ?? ''
+  const genAI = new GoogleGenerativeAI(key)
+
   // Allow env override for local testing / manual switching
   const resolvedModel = (process.env.GEMINI_MODEL_OVERRIDE as GeminiModel) ?? model
 

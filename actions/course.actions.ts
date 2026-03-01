@@ -14,14 +14,16 @@ interface RawQuestion {
 /**
  * Generates questions via Gemini and returns them.
  * Firestore write is done on the client (authenticated user context).
+ * userKeys — user's own Gemini API keys passed from client.
  */
 export async function generateQuestions(
   description: string,
   mode: CourseMode = 'tech',
-  count: number = 50
+  count: number = 50,
+  userKeys?: string[]
 ): Promise<Question[]> {
   const prompt = PROMPTS.generateQuestions(description, mode, count)
-  const { text } = await callGeminiWithFallback(prompt, mode)
+  const { text } = await callGeminiWithFallback(prompt, mode, userKeys)
 
   const rawQuestions = parseQuestionsJson(text)
 

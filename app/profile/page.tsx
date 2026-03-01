@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Flame, Zap, BookOpen, LogOut, User, Users, ChevronRight } from 'lucide-react'
+import { Flame, Zap, BookOpen, LogOut, User, Users, ChevronRight, Settings } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useStreak } from '@/hooks/useStreak'
 import { useXP } from '@/hooks/useXP'
@@ -112,6 +112,30 @@ export default function ProfilePage() {
                 <span className="text-sm text-[var(--text-muted)]">{friendCount}</span>
                 <ChevronRight className="h-4 w-4 text-[var(--text-disabled)]" />
               </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Settings row */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card
+            variant="default"
+            padding="sm"
+            interactive
+            onClick={() => router.push('/settings')}
+          >
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <Settings className="h-4 w-4 text-[var(--accent)]" />
+                <span className="text-sm font-medium text-[var(--text-primary)]">
+                  {t.settings.title}
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-[var(--text-disabled)]" />
             </div>
           </Card>
         </motion.div>

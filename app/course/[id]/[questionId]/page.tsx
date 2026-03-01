@@ -175,7 +175,7 @@ export default function QuestionPage() {
   const { user, loading: authLoading } = useAuth()
   const { course, loading: courseLoading } = useCourse(courseId)
   const { current: streak } = useStreak()
-  const { addXP, updateStreak } = useUserContext()
+  const { addXP, updateStreak, profile } = useUserContext()
 
   const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [messages, setMessages] = useState<StoredMessage[]>([])
@@ -257,7 +257,7 @@ export default function QuestionPage() {
 
     setExamplesLoading(true)
     try {
-      const data = await generateExamples(question.text, course?.mode ?? 'tech')
+      const data = await generateExamples(question.text, course?.mode ?? 'tech', profile?.geminiKeys)
       setExamples(data)
       await setDoc(doc(db, 'chatHistory', chatDocId), { examples: data }, { merge: true })
     } finally {
@@ -290,7 +290,7 @@ export default function QuestionPage() {
         .filter((m) => m.id !== 'q0')
         .map((m) => ({ role: m.role, content: m.content }))
 
-      const response = await sendChatMessage(question.text, historyForAI, forceEvaluate, course.mode ?? 'tech')
+      const response = await sendChatMessage(question.text, historyForAI, forceEvaluate, course.mode ?? 'tech', profile?.geminiKeys)
 
       const evalData = response.evaluation
         ? {

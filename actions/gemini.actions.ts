@@ -10,33 +10,43 @@ interface GeminiCallResult {
 }
 
 /**
- * Calls Gemini with automatic model fallback on 429/503.
- * Tries each model in GEMINI_MODEL_CHAIN until one succeeds.
+ * Calls Gemini with automatic key×model fallback on 429/503.
+ * Tries each user key (or env key as fallback) × each model in GEMINI_MODEL_CHAIN.
  * mode — determines the system instruction (persona) for the AI.
+ * userKeys — user's own Gemini API keys; if empty falls back to GEMINI_API_KEY env var.
  */
 export async function callGeminiWithFallback(
   prompt: string,
-  mode: CourseMode = 'tech'
+  mode: CourseMode = 'tech',
+  userKeys?: string[]
 ): Promise<GeminiCallResult> {
+  // Use user's keys if provided (non-empty strings only), else fall back to env key
+  const keysToTry = userKeys?.filter(Boolean).length
+    ? userKeys.filter(Boolean)
+    : [process.env.GEMINI_API_KEY ?? '']
+
   let lastError: unknown
 
-  for (const model of GEMINI_MODEL_CHAIN) {
-    try {
-      const gemini = getGeminiModel(model, AI_CONFIG.getSystemInstruction(mode))
-      const result = await gemini.generateContent(prompt)
-      const text = result.response.text()
-      return { text, modelUsed: model }
-    } catch (err: unknown) {
-      const status = extractHttpStatus(err)
-      if (status !== null && AI_CONFIG.fallbackOnStatus.includes(status)) {
-        lastError = err
-        continue // try next model
+  for (const apiKey of keysToTry) {
+    for (const model of GEMINI_MODEL_CHAIN) {
+      try {
+        const gemini = getGeminiModel(model, AI_CONFIG.getSystemInstruction(mode), apiKey)
+        const result = await gemini.generateContent(prompt)
+        const text = result.response.text()
+        return { text, modelUsed: model }
+      } catch (err: unknown) {
+        const status = extractHttpStatus(err)
+        if (status !== null && AI_CONFIG.fallbackOnStatus.includes(status)) {
+          lastError = err
+          continue // try next model for this key
+        }
+        throw err // non-retryable error — propagate immediately
       }
-      throw err // non-retryable error — propagate immediately
     }
+    // All models exhausted for this key — try next key
   }
 
-  throw lastError ?? new Error('All Gemini models failed')
+  throw lastError ?? new Error('All Gemini keys and models failed')
 }
 
 function extractHttpStatus(err: unknown): number | null {

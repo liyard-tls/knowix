@@ -16,6 +16,7 @@ export interface UserProfile {
   achievements: string[]    // масив id розблокованих досягнень
   friends?: string[]        // accepted friend uids
   friendRequestsIn?: string[] // pending incoming request uids
+  geminiKeys?: string[]     // user's own Gemini API keys (ordered, fallback chain)
 }
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined'

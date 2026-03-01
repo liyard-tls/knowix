@@ -26,15 +26,17 @@ export interface ChatResponse {
  * Sends a chat turn to Gemini.
  * AI decides whether to reply conversationally or evaluate.
  * If forceEvaluate=true — always evaluates.
+ * userKeys — user's own Gemini API keys passed from client.
  */
 export async function sendChatMessage(
   questionText: string,
   history: ChatMessage[],
   forceEvaluate: boolean,
-  mode: CourseMode = 'tech'
+  mode: CourseMode = 'tech',
+  userKeys?: string[]
 ): Promise<ChatResponse> {
   const prompt = PROMPTS.chat(questionText, history, forceEvaluate, mode)
-  const { text } = await callGeminiWithFallback(prompt, mode)
+  const { text } = await callGeminiWithFallback(prompt, mode, userKeys)
 
   // Check if AI returned an evaluation JSON block
   const evalMatch = text.match(/\{"EVAL":\s*(\{[\s\S]*?\})\s*\}/)
@@ -69,13 +71,15 @@ export async function sendChatMessage(
 
 /**
  * Generates 3 code examples for the Examples tab.
+ * userKeys — user's own Gemini API keys passed from client.
  */
 export async function generateExamples(
   questionText: string,
-  mode: CourseMode = 'tech'
+  mode: CourseMode = 'tech',
+  userKeys?: string[]
 ): Promise<CodeExample[]> {
   const prompt = PROMPTS.generateExamples(questionText, mode)
-  const { text } = await callGeminiWithFallback(prompt, mode)
+  const { text } = await callGeminiWithFallback(prompt, mode, userKeys)
 
   const cleaned = text
     .replace(/^```(?:json)?\s*/im, '')

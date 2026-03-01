@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase'
 import { Button, Card } from '@/components/atoms'
 import { AppShell } from '@/components/layout'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserContext } from '@/context'
 import { generateQuestions } from '@/actions/course.actions'
 import { t } from '@/lib/i18n'
 import { cn } from '@/lib/cn'
@@ -19,6 +20,7 @@ const MODES: CourseMode[] = ['tech', 'language', 'general']
 export default function NewCoursePage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { profile } = useUserContext()
   const [mode, setMode] = useState<CourseMode>('tech')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
@@ -47,8 +49,8 @@ export default function NewCoursePage() {
     setError('')
 
     try {
-      // 1. Generate questions via Server Action (uses GEMINI_API_KEY server-side)
-      const questions = await generateQuestions(description.trim(), mode)
+      // 1. Generate questions via Server Action (uses user's keys or server key as fallback)
+      const questions = await generateQuestions(description.trim(), mode, 50, profile?.geminiKeys)
 
       // 2. Derive title
       const desc = description.trim()

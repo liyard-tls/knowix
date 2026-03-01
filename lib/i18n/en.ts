@@ -182,6 +182,21 @@ export const en = {
     memberSince: (date: string) => `Member since ${date}`,
   },
 
+  settings: {
+    title: 'Settings',
+    geminiKeys: {
+      sectionTitle: 'Gemini API Keys',
+      description: 'Add your own Gemini API keys. When one hits its rate limit, the app automatically tries the next one.',
+      getKeyLink: 'Get your API key at aistudio.google.com',
+      addKey: 'Add Key',
+      saveKey: 'Save',
+      placeholder: 'Paste your API key (AIza...)',
+      empty: 'No keys added. The app will use the default server key.',
+      remove: 'Remove',
+      keyMasked: (key: string) => `${key.slice(0, 8)}...${key.slice(-4)}`,
+    },
+  },
+
   friends: {
     title: 'Friends',
     copyLink: 'Copy My Link',
