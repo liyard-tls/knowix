@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, Circle, Flame, Zap } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, Circle, Flame, Zap, Trash2 } from 'lucide-react'
+import { doc, deleteDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useCourse } from '@/hooks/useCourse'
 import { useStreak } from '@/hooks/useStreak'
@@ -40,10 +42,24 @@ export default function CoursePage() {
   const { course, loading: courseLoading } = useCourse(id)
   const { current: streak } = useStreak()
   const { xp, level } = useXP()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
   }, [user, authLoading, router])
+
+  const handleDelete = async () => {
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'courses', id))
+      router.push('/dashboard')
+    } catch {
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   if (authLoading || courseLoading) {
     return (
@@ -106,7 +122,46 @@ export default function CoursePage() {
             <h1 className="text-base font-semibold text-[var(--text-primary)] line-clamp-2 flex-1">
               {course.title}
             </h1>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className={cn(
+                'flex-shrink-0 p-2 rounded-[var(--radius-md)] transition-colors',
+                confirmDelete
+                  ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+                  : 'text-[var(--text-disabled)] hover:bg-[var(--bg-elevated)] hover:text-red-400'
+              )}
+              title={confirmDelete ? 'Tap again to confirm delete' : 'Delete course'}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
+
+          {/* Delete confirmation banner */}
+          <AnimatePresence>
+            {confirmDelete && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-3"
+              >
+                <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] bg-red-500/10 border border-red-500/20">
+                  <p className="text-xs text-red-400">
+                    {deleting ? 'Deleting…' : 'Tap the trash icon again to confirm'}
+                  </p>
+                  {!deleting && (
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] ml-3"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Stats row */}
           <div className="flex items-center gap-3 mb-3">

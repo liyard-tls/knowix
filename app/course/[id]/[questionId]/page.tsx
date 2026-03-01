@@ -276,7 +276,7 @@ export default function QuestionPage() {
 
     setExamplesLoading(true)
     try {
-      const data = await generateExamples(question.text)
+      const data = await generateExamples(question.text, course?.mode ?? 'tech')
       setExamples(data)
       await setDoc(doc(db, 'chatHistory', chatDocId), { examples: data }, { merge: true })
     } finally {
@@ -309,7 +309,7 @@ export default function QuestionPage() {
         .filter((m) => m.id !== 'q0')
         .map((m) => ({ role: m.role, content: m.content }))
 
-      const response = await sendChatMessage(question.text, historyForAI, forceEvaluate)
+      const response = await sendChatMessage(question.text, historyForAI, forceEvaluate, course.mode ?? 'tech')
 
       const evalData = response.evaluation
         ? {

@@ -63,19 +63,56 @@ export const en = {
 
   newCourse: {
     title: 'New Course',
+    modeLabel: 'What type of course?',
+    modes: {
+      tech: {
+        label: 'Tech / IT',
+        description: 'Coding, system design, interviews',
+        emoji: '💻',
+      },
+      language: {
+        label: 'Language',
+        description: 'Grammar, vocabulary, writing',
+        emoji: '🗣️',
+      },
+      general: {
+        label: 'General',
+        description: 'Science, business, any topic',
+        emoji: '🧠',
+      },
+    },
     label: 'What do you want to learn or improve?',
-    placeholder:
-      "e.g. I want to move from Unity C# to backend development and prepare for interviews...",
+    placeholders: {
+      tech: 'e.g. Move from Unity C# to backend development, prepare for React interviews...',
+      language: 'e.g. Improve my English writing skills, learn formal business vocabulary...',
+      general: 'e.g. Learn the basics of macroeconomics, understand stoic philosophy...',
+    },
     hint: 'AI will generate 50 questions tailored to your request',
     errorMinLength: 'Please describe what you want to learn (at least 10 characters)',
     examplesLabel: 'Or pick an example:',
-    examples: [
-      'Move from Unity C# to C# backend developer',
-      'Learn ASP.NET Core from scratch',
-      'Prepare for a React interview',
-      'Understand Docker and Kubernetes',
-      'SQL for backend developers',
-    ],
+    examples: {
+      tech: [
+        'Move from Unity C# to C# backend developer',
+        'Learn ASP.NET Core from scratch',
+        'Prepare for a React interview',
+        'Understand Docker and Kubernetes',
+        'SQL for backend developers',
+      ],
+      language: [
+        'Improve my English writing for professional emails',
+        'Learn formal vs informal English registers',
+        'Practice English grammar — conditionals and tenses',
+        'Expand vocabulary for business meetings',
+        'Prepare for IELTS writing and speaking',
+      ],
+      general: [
+        'Understand the basics of macroeconomics',
+        'Learn stoic philosophy and its practical applications',
+        'Prepare for a product management interview',
+        'Understand UX design principles',
+        'Learn the fundamentals of personal finance',
+      ],
+    },
     generating: {
       title: 'AI is generating questions...',
       subtitle: 'This usually takes 10–20 seconds',

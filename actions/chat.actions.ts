@@ -2,7 +2,7 @@
 
 import { PROMPTS } from '@/config/ai'
 import { callGeminiWithFallback } from './gemini.actions'
-import type { EvaluationResult } from '@/types'
+import type { EvaluationResult, CourseMode } from '@/types'
 
 export interface CodeExample {
   title: string
@@ -30,10 +30,11 @@ export interface ChatResponse {
 export async function sendChatMessage(
   questionText: string,
   history: ChatMessage[],
-  forceEvaluate: boolean
+  forceEvaluate: boolean,
+  mode: CourseMode = 'tech'
 ): Promise<ChatResponse> {
-  const prompt = PROMPTS.chat(questionText, history, forceEvaluate)
-  const { text } = await callGeminiWithFallback(prompt)
+  const prompt = PROMPTS.chat(questionText, history, forceEvaluate, mode)
+  const { text } = await callGeminiWithFallback(prompt, mode)
 
   // Check if AI returned an evaluation JSON block
   const evalMatch = text.match(/\{"EVAL":\s*(\{[\s\S]*?\})\s*\}/)
@@ -69,9 +70,12 @@ export async function sendChatMessage(
 /**
  * Generates 3 code examples for the Examples tab.
  */
-export async function generateExamples(questionText: string): Promise<CodeExample[]> {
-  const prompt = PROMPTS.generateExamples(questionText)
-  const { text } = await callGeminiWithFallback(prompt)
+export async function generateExamples(
+  questionText: string,
+  mode: CourseMode = 'tech'
+): Promise<CodeExample[]> {
+  const prompt = PROMPTS.generateExamples(questionText, mode)
+  const { text } = await callGeminiWithFallback(prompt, mode)
 
   const cleaned = text
     .replace(/^```(?:json)?\s*/im, '')

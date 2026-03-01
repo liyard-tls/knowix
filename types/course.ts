@@ -1,5 +1,6 @@
 export type QuestionStatus = 'pending' | 'correct' | 'partial' | 'incorrect'
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard'
+export type CourseMode = 'tech' | 'language' | 'general'
 
 export interface Question {
   id: string
@@ -16,9 +17,10 @@ export interface Course {
   id: string
   userId: string
   title: string
-  description: string // Оригінальний запит юзера
+  description: string  // Оригінальний запит юзера
+  mode: CourseMode     // Режим курсу — впливає на промпти AI
   questions: Question[]
-  isPublic: boolean   // true — курс видимий іншим юзерам (sharing)
+  isPublic: boolean    // true — курс видимий іншим юзерам (sharing)
   createdAt: number
   updatedAt: number
   completedAt?: number

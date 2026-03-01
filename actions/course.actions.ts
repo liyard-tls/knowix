@@ -2,7 +2,7 @@
 
 import { PROMPTS } from '@/config/ai'
 import { callGeminiWithFallback } from './gemini.actions'
-import type { Question, QuestionDifficulty } from '@/types'
+import type { Question, QuestionDifficulty, CourseMode } from '@/types'
 
 interface RawQuestion {
   order: number
@@ -17,10 +17,11 @@ interface RawQuestion {
  */
 export async function generateQuestions(
   description: string,
+  mode: CourseMode = 'tech',
   count: number = 50
 ): Promise<Question[]> {
-  const prompt = PROMPTS.generateQuestions(description, count)
-  const { text } = await callGeminiWithFallback(prompt)
+  const prompt = PROMPTS.generateQuestions(description, mode, count)
+  const { text } = await callGeminiWithFallback(prompt, mode)
 
   const rawQuestions = parseQuestionsJson(text)
 

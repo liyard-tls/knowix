@@ -2,6 +2,7 @@
 
 import { GEMINI_MODEL_CHAIN, AI_CONFIG, type GeminiModel } from '@/config/ai'
 import { getGeminiModel } from '@/lib/gemini'
+import type { CourseMode } from '@/types'
 
 interface GeminiCallResult {
   text: string
@@ -11,13 +12,17 @@ interface GeminiCallResult {
 /**
  * Calls Gemini with automatic model fallback on 429/503.
  * Tries each model in GEMINI_MODEL_CHAIN until one succeeds.
+ * mode — determines the system instruction (persona) for the AI.
  */
-export async function callGeminiWithFallback(prompt: string): Promise<GeminiCallResult> {
+export async function callGeminiWithFallback(
+  prompt: string,
+  mode: CourseMode = 'tech'
+): Promise<GeminiCallResult> {
   let lastError: unknown
 
   for (const model of GEMINI_MODEL_CHAIN) {
     try {
-      const gemini = getGeminiModel(model)
+      const gemini = getGeminiModel(model, AI_CONFIG.getSystemInstruction(mode))
       const result = await gemini.generateContent(prompt)
       const text = result.response.text()
       return { text, modelUsed: model }

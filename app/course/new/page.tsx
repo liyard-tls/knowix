@@ -11,14 +11,27 @@ import { AppShell } from '@/components/layout'
 import { useAuth } from '@/hooks/useAuth'
 import { generateQuestions } from '@/actions/course.actions'
 import { t } from '@/lib/i18n'
-import type { Course } from '@/types'
+import { cn } from '@/lib/cn'
+import type { Course, CourseMode } from '@/types'
+
+const MODES: CourseMode[] = ['tech', 'language', 'general']
 
 export default function NewCoursePage() {
   const router = useRouter()
   const { user } = useAuth()
+  const [mode, setMode] = useState<CourseMode>('tech')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const examples = t.newCourse.examples[mode]
+  const placeholder = t.newCourse.placeholders[mode]
+
+  const handleModeChange = (m: CourseMode) => {
+    setMode(m)
+    setDescription('')
+    setError('')
+  }
 
   const handleCreate = async () => {
     if (!description.trim() || description.trim().length < 10) {
@@ -35,7 +48,7 @@ export default function NewCoursePage() {
 
     try {
       // 1. Generate questions via Server Action (uses GEMINI_API_KEY server-side)
-      const questions = await generateQuestions(description.trim())
+      const questions = await generateQuestions(description.trim(), mode)
 
       // 2. Derive title
       const desc = description.trim()
@@ -49,6 +62,7 @@ export default function NewCoursePage() {
         userId: user.uid,
         title,
         description: desc,
+        mode,
         questions,
         isPublic: false,
         createdAt: now,
@@ -84,6 +98,37 @@ export default function NewCoursePage() {
           transition={{ duration: 0.3 }}
           className="flex flex-col gap-6 flex-1"
         >
+          {/* Mode selector */}
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-[var(--text-secondary)]">
+              {t.newCourse.modeLabel}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {MODES.map((m) => {
+                const cfg = t.newCourse.modes[m]
+                const isActive = mode === m
+                return (
+                  <button
+                    key={m}
+                    onClick={() => handleModeChange(m)}
+                    disabled={loading}
+                    className={cn(
+                      'flex flex-col items-center gap-1 px-2 py-3 rounded-[var(--radius-lg)]',
+                      'border text-center transition-all',
+                      isActive
+                        ? 'border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--text-primary)]'
+                        : 'border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:border-[var(--text-disabled)]'
+                    )}
+                  >
+                    <span className="text-xl">{cfg.emoji}</span>
+                    <span className="text-xs font-semibold leading-tight">{cfg.label}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] leading-tight">{cfg.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Description */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-[var(--text-secondary)]">
@@ -95,7 +140,7 @@ export default function NewCoursePage() {
                 setDescription(e.target.value)
                 if (error) setError('')
               }}
-              placeholder={t.newCourse.placeholder}
+              placeholder={placeholder}
               rows={5}
               className="w-full px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] text-sm leading-relaxed resize-none focus:outline-none focus:border-[var(--accent)] transition-colors"
               disabled={loading}
@@ -114,7 +159,7 @@ export default function NewCoursePage() {
               {t.newCourse.examplesLabel}
             </p>
             <div className="flex flex-col gap-2">
-              {t.newCourse.examples.map((ex) => (
+              {examples.map((ex) => (
                 <button
                   key={ex}
                   onClick={() => setDescription(ex)}

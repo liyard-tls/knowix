@@ -5,9 +5,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 /**
  * Returns a Gemini model instance for a given model name.
+ * systemInstruction — mode-specific persona (tech/language/general).
  * Model selection and fallback logic is handled in Server Actions (gemini.actions.ts).
  */
-export function getGeminiModel(model: GeminiModel) {
+export function getGeminiModel(model: GeminiModel, systemInstruction?: string) {
   // Allow env override for local testing / manual switching
   const resolvedModel = (process.env.GEMINI_MODEL_OVERRIDE as GeminiModel) ?? model
 
@@ -17,7 +18,7 @@ export function getGeminiModel(model: GeminiModel) {
       temperature: AI_CONFIG.temperature,
       maxOutputTokens: AI_CONFIG.maxOutputTokens,
     },
-    systemInstruction: AI_CONFIG.systemInstruction,
+    systemInstruction: systemInstruction ?? AI_CONFIG.getSystemInstruction('tech'),
   })
 }
 
