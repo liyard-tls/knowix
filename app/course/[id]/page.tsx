@@ -346,6 +346,15 @@ export default function CoursePage() {
                           +{q.xpBonus} XP
                         </span>
                       )}
+                      {q.status !== 'pending' && q.score !== undefined && (
+                        <span className={cn(
+                          'ml-auto text-[10px] font-semibold tabular-nums',
+                          q.score >= 80 ? 'text-emerald-400' :
+                          q.score >= 40 ? 'text-yellow-400' : 'text-red-400'
+                        )}>
+                          {q.score}/100
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
