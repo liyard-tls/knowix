@@ -1,15 +1,15 @@
-import type { CourseMode } from '@/types'
+import type { CourseMode } from "@/types";
 
 // ─── Gemini model chain ────────────────────────────────────────
 // Models are used in priority order. When one hits its rate limit (429/503),
 // the system automatically falls back to the next model in the chain.
 export const GEMINI_MODEL_CHAIN = [
-  'gemini-2.5-flash',      // First priority — best quality, free tier
-  'gemini-2.0-flash',      // Fallback — GA, stable
-  'gemini-2.0-flash-lite', // Last resort — lightest, highest rate limits
-] as const
+  "gemini-2.5-flash",      // First priority — best quality, free tier
+  "gemini-2.0-flash",      // Fallback — GA, stable
+  "gemini-2.0-flash-lite", // Last resort — lightest, highest rate limits
+] as const;
 
-export type GeminiModel = (typeof GEMINI_MODEL_CHAIN)[number]
+export type GeminiModel = (typeof GEMINI_MODEL_CHAIN)[number];
 
 // ─── Mode-specific system instructions ────────────────────────
 const SYSTEM_INSTRUCTIONS: Record<CourseMode, string> = {
@@ -44,7 +44,7 @@ Your role:
 - Always respond in the same language as the user's message
 - Be concise but thorough — no padding, no repetition
 - For evaluations, always return structured JSON as specified in the prompt`,
-}
+};
 
 // ─── AI config ─────────────────────────────────────────────────
 export const AI_CONFIG = {
@@ -53,8 +53,9 @@ export const AI_CONFIG = {
   maxOutputTokens: 8192,
   // HTTP status codes that trigger automatic model fallback
   fallbackOnStatus: [429, 503] as number[],
-  getSystemInstruction: (mode: CourseMode = 'tech') => SYSTEM_INSTRUCTIONS[mode],
-} as const
+  getSystemInstruction: (mode: CourseMode = "tech") =>
+    SYSTEM_INSTRUCTIONS[mode],
+} as const;
 
 // ─── Prompts ───────────────────────────────────────────────────
 export const PROMPTS = {
@@ -64,7 +65,11 @@ export const PROMPTS = {
    * Поведінка залежить від mode: tech — code-focused, language — grammar/vocab, general — концепти.
    * Повертає JSON масив.
    */
-  generateQuestions: (topic: string, mode: CourseMode = 'tech', count: number = 50) => {
+  generateQuestions: (
+    topic: string,
+    mode: CourseMode = "tech",
+    count: number = 50,
+  ) => {
     const modeInstructions: Record<CourseMode, string> = {
       tech: `- Mix theory questions with "how would you implement" and "what's wrong with this code" types
 - Include coding scenarios and system design aspects where relevant
@@ -78,7 +83,7 @@ export const PROMPTS = {
       general: `- Mix conceptual questions ("Explain..."), applied questions ("How would you..."), and analytical questions ("What are the trade-offs of...")
 - Avoid coding questions unless the topic explicitly involves programming
 - Questions should test real understanding, not just memorisation`,
-    }
+    };
 
     return `Generate ${count} practical questions for someone learning: "${topic}"
 
@@ -95,7 +100,7 @@ Return ONLY a valid JSON array, no markdown, no explanation:
     "difficulty": "easy" | "medium" | "hard",
     "xpBonus": 3
   }
-]`.trim()
+]`.trim();
   },
 
   /**
@@ -107,13 +112,13 @@ Return ONLY a valid JSON array, no markdown, no explanation:
    */
   chat: (
     question: string,
-    history: Array<{ role: 'user' | 'assistant'; content: string }>,
+    history: Array<{ role: "user" | "assistant"; content: string }>,
     forceEvaluate: boolean,
-    mode: CourseMode = 'tech'
+    mode: CourseMode = "tech",
   ) => {
     const historyText = history
-      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n')
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+      .join("\n");
 
     const evalGuidelines: Record<CourseMode, string> = {
       tech: `- "correct" = 80-100: covers key concepts well
@@ -133,18 +138,20 @@ Return ONLY a valid JSON array, no markdown, no explanation:
 - "incorrect" = 0-39: fundamentally wrong or very superficial
 - Feedback: use **bold** for key concepts, bullet points for multiple items
 - codeExample: null unless the topic explicitly involves code`,
-    }
+    };
 
     return `You are evaluating a learner's understanding of this question:
 "${question}"
 
 Conversation so far:
-${historyText || '(no messages yet)'}
+${historyText || "(no messages yet)"}
 
-${forceEvaluate
-  ? `The user has explicitly requested evaluation. Evaluate their answer now.`
-  : `Decide: does the user's latest message contain a substantive answer to the question?
-- If YES (they attempted to answer, even partially): evaluate it immediately — do NOT ask follow-up questions first.
+${
+  forceEvaluate
+    ? `The user has explicitly requested evaluation. Evaluate their answer now.`
+    : `Decide: does the user's latest message contain a substantive answer to the question?
+- If the question asks about multiple distinct concepts (e.g. "difference between X, Y, and Z") and the user only addressed some of them: ask briefly about the missing ones before evaluating. Keep it short — one sentence max.
+- If YES (they answered all key parts, even partially): evaluate it immediately.
 - If NO (they asked a clarifying question, want hints, or haven't started answering): reply conversationally in markdown.`
 }
 
@@ -158,7 +165,7 @@ When NOT evaluating, respond in markdown with clear structure:
 - Use **bold** for key terms
 - Use bullet lists for multiple points
 - Be concise but thorough
-- NEVER ask the user to write or type code examples — they are on mobile`.trim()
+- NEVER ask the user to write or type code examples — they are on mobile`.trim();
   },
 
   /**
@@ -167,8 +174,8 @@ When NOT evaluating, respond in markdown with clear structure:
    * Для tech mode — приклади коду.
    * Повертає JSON масив.
    */
-  generateExamples: (question: string, mode: CourseMode = 'tech') => {
-    if (mode === 'language') {
+  generateExamples: (question: string, mode: CourseMode = "tech") => {
+    if (mode === "language") {
       return `For this language learning question: "${question}"
 
 Generate 3 practical examples that help understand the concept.
@@ -182,10 +189,10 @@ Return ONLY valid JSON, no markdown wrapper:
     "explanation": "1-2 sentences explaining what this example demonstrates",
     "code": "the example text or sentences (plain text, no code syntax)"
   }
-]`.trim()
+]`.trim();
     }
 
-    if (mode === 'general') {
+    if (mode === "general") {
       return `For this question: "${question}"
 
 Generate 3 practical examples or illustrations that help understand the concept.
@@ -200,7 +207,7 @@ Return ONLY valid JSON, no markdown wrapper:
     "explanation": "1-2 sentences explaining what this example demonstrates",
     "code": "the example content (plain text explanation, diagram description, or code if technical)"
   }
-]`.trim()
+]`.trim();
     }
 
     // tech (default)
@@ -217,6 +224,6 @@ Return ONLY valid JSON, no markdown wrapper:
     "explanation": "1-2 sentences explaining what this example demonstrates",
     "code": "the code (under 30 lines, well-commented)"
   }
-]`.trim()
+]`.trim();
   },
-} as const
+} as const;
