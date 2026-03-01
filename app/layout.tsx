@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Knowix',
   },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -39,6 +42,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </UserProvider>
         </AuthProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
