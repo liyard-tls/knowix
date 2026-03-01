@@ -4,9 +4,18 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── Users ───────────────────────────────────────────────────
-    // Only the owner can read/write their own profile.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Any signed-in user can read any profile (needed for public profiles + friend lookup).
+      allow read: if request.auth != null;
+
+      // Full write for owner (XP, streak, achievements, friends list, etc.)
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Allow any signed-in user to update ONLY the friendRequestsIn and friends fields
+      // on someone else's document (needed for friend requests and accept/remove flows).
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['friendRequestsIn', 'friends']);
     }
 
     // ─── Chat history ─────────────────────────────────────────────
@@ -15,6 +24,26 @@ service cloud.firestore {
     match /chatHistory/{docId} {
       allow read, write: if request.auth != null
                          && docId.matches(request.auth.uid + '_.*');
+    }
+
+    // ─── Friend Requests ─────────────────────────────────────────
+    match /friendRequests/{requestId} {
+      // Parties of the request can read it.
+      allow read: if request.auth != null
+                  && (resource.data.from == request.auth.uid
+                      || resource.data.to == request.auth.uid);
+
+      // Any signed-in user can create a request where they are the sender.
+      allow create: if request.auth != null
+                    && request.resource.data.from == request.auth.uid
+                    && request.resource.data.status == 'pending';
+
+      // Only the recipient can update (accept/decline).
+      // Only the 'status' field may change.
+      allow update: if request.auth != null
+                    && resource.data.to == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status']);
     }
 
     // ─── Courses ─────────────────────────────────────────────────

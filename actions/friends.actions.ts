@@ -1,10 +1,10 @@
-'use server'
+// Client-side Firestore helpers — NOT a server action.
+// Runs in the browser with the signed-in user's auth context so Firestore
+// Security Rules can verify the caller's identity.
 
 import {
   collection,
   doc,
-  addDoc,
-  updateDoc,
   writeBatch,
   arrayUnion,
   arrayRemove,
