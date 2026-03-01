@@ -52,7 +52,7 @@ export default function FriendsPage() {
     <AppShell showNav={false}>
       <div className="flex flex-col min-h-dvh">
         {/* Header */}
-        <div className="px-4 pt-12 pb-4 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+        <div className="px-4 pb-4 pt-safe bg-[var(--bg-surface)] border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}

@@ -30,7 +30,7 @@ export default function StatsPage() {
 
   return (
     <AppShell>
-      <div className="px-4 pt-10 pb-4 flex flex-col gap-6">
+      <div className="px-4 pb-4 pt-safe flex flex-col gap-6">
         <h1 className="text-xl font-bold text-[var(--text-primary)]">{t.stats.title}</h1>
 
         {/* Streak + XP cards */}

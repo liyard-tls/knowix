@@ -37,8 +37,8 @@
   --radius-full: 9999px;
 
   /* Шрифти */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 
   /* Тіні */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -81,7 +81,9 @@
 }
 
 /* ─── Base Styles ────────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
@@ -100,16 +102,26 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: var(--radius-full);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
 
 /* Code */
-code, pre { font-family: var(--font-mono); }
+code,
+pre {
+  font-family: var(--font-mono);
+}
 pre {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -136,8 +148,14 @@ pre {
 
 /* Safe area padding for bottom nav */
 .pb-nav {
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--bottom-nav-height);
 }
+
+/* Safe area padding for top */
+.pt-safe {
+  padding-top: 16px;
+}
+
 
 /* Gradient accent text */
 .gradient-text {
@@ -149,8 +167,12 @@ pre {
 
 /* Skeleton loading shimmer */
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
@@ -167,8 +189,13 @@ pre {
 
 /* Streak glow animation */
 @keyframes glow-pulse {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(204, 120, 92, 0.4)); }
-  50%       { filter: drop-shadow(0 0 16px rgba(204, 120, 92, 0.8)); }
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(204, 120, 92, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(204, 120, 92, 0.8));
+  }
 }
 
 .glow-pulse {

@@ -144,8 +144,8 @@ ${historyText || '(no messages yet)'}
 ${forceEvaluate
   ? `The user has explicitly requested evaluation. Evaluate their answer now.`
   : `Decide: does the user's latest message contain a substantive answer to the question?
-- If YES (they attempted to answer): evaluate it.
-- If NO (they asked a follow-up, want clarification, or are continuing discussion): reply conversationally in markdown.`
+- If YES (they attempted to answer, even partially): evaluate it immediately — do NOT ask follow-up questions first.
+- If NO (they asked a clarifying question, want hints, or haven't started answering): reply conversationally in markdown.`
 }
 
 When evaluating, return ONLY this JSON (no markdown wrapper, no explanation):
@@ -157,7 +157,8 @@ ${evalGuidelines[mode]}
 When NOT evaluating, respond in markdown with clear structure:
 - Use **bold** for key terms
 - Use bullet lists for multiple points
-- Be concise but thorough`.trim()
+- Be concise but thorough
+- NEVER ask the user to write or type code examples — they are on mobile`.trim()
   },
 
   /**

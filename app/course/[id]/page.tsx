@@ -64,7 +64,7 @@ export default function CoursePage() {
   if (authLoading || courseLoading) {
     return (
       <AppShell showNav={false}>
-        <div className="flex flex-col gap-3 px-4 pt-12">
+        <div className="flex flex-col gap-3 px-4 pt-safe">
           <div className="skeleton h-8 w-48" />
           <div className="skeleton h-4 w-32" />
           <div className="skeleton h-2 w-full mt-2" />
@@ -111,7 +111,7 @@ export default function CoursePage() {
     <AppShell showNav={false}>
       <div className="flex flex-col min-h-dvh">
         {/* Header */}
-        <div className="px-4 pt-12 pb-4 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+        <div className="px-4 pb-4 pt-safe bg-[var(--bg-surface)] border-b border-[var(--border)]">
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => router.push('/dashboard')}
@@ -215,49 +215,43 @@ export default function CoursePage() {
           {course.questions
             .slice()
             .sort((a, b) => a.order - b.order)
-            .map((q, i) => (
-              <motion.div
+            .map((q) => (
+              <button
                 key={q.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.015 }}
+                onClick={() => handleQuestionClick(q)}
+                className={cn(
+                  'w-full text-left px-4 py-3 rounded-[var(--radius-md)]',
+                  'border border-[var(--border)] bg-[var(--bg-surface)]',
+                  'hover:border-[var(--accent)]/40 hover:bg-[var(--bg-elevated)]',
+                  'transition-colors active:scale-[0.99]',
+                  STATUS_BG[q.status]
+                )}
               >
-                <button
-                  onClick={() => handleQuestionClick(q)}
-                  className={cn(
-                    'w-full text-left px-4 py-3 rounded-[var(--radius-md)]',
-                    'border border-[var(--border)] bg-[var(--bg-surface)]',
-                    'hover:border-[var(--accent)]/40 hover:bg-[var(--bg-elevated)]',
-                    'transition-colors active:scale-[0.99]',
-                    STATUS_BG[q.status]
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-0.5">{STATUS_ICON[q.status]}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] text-[var(--text-disabled)] font-mono">
-                          #{q.order}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">{STATUS_ICON[q.status]}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] text-[var(--text-disabled)] font-mono">
+                        #{q.order}
+                      </span>
+                      <span className={cn(
+                        'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
+                        DIFFICULTY_BADGE[q.difficulty]
+                      )}>
+                        {q.difficulty}
+                      </span>
+                      {q.xpBonus > 0 && (
+                        <span className="text-[10px] text-[var(--text-disabled)]">
+                          +{q.xpBonus} XP
                         </span>
-                        <span className={cn(
-                          'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
-                          DIFFICULTY_BADGE[q.difficulty]
-                        )}>
-                          {q.difficulty}
-                        </span>
-                        {q.xpBonus > 0 && (
-                          <span className="text-[10px] text-[var(--text-disabled)]">
-                            +{q.xpBonus} XP
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-[var(--text-primary)] line-clamp-2 leading-snug">
-                        {q.text}
-                      </p>
+                      )}
                     </div>
+                    <p className="text-sm text-[var(--text-primary)] line-clamp-2 leading-snug">
+                      {q.text}
+                    </p>
                   </div>
-                </button>
-              </motion.div>
+                </div>
+              </button>
             ))}
         </div>
       </div>

@@ -17,11 +17,8 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      <div className="flex items-stretch bg-[var(--bg-surface)] border-t border-[var(--border)] h-[var(--bottom-nav-height)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--bg-surface)] border-t border-[var(--border)]" style={{ height: 'var(--bottom-nav-height)' }}>
+      <div className="flex items-stretch h-full max-w-md mx-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/')
 

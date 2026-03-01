@@ -78,16 +78,8 @@ const STATUS_CONFIG = {
 
 // ─── Separator ────────────────────────────────────────────────────────────────
 
-function Separator({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3 my-1">
-      <div className="flex-1 h-px bg-[var(--border)]" />
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-disabled)]">
-        {label}
-      </span>
-      <div className="flex-1 h-px bg-[var(--border)]" />
-    </div>
-  )
+function Separator() {
+  return <div className="h-px bg-[var(--border)] my-3" />
 }
 
 // ─── Examples tab ─────────────────────────────────────────────────────────────
@@ -99,7 +91,7 @@ function ExamplesTab({
   examples: CodeExample[]
   loading: boolean
 }) {
-  const [expanded, setExpanded] = useState<number | null>(0)
+  const [collapsed, setCollapsed] = useState<number | null>(null)
 
   if (loading) {
     return (
@@ -119,37 +111,28 @@ function ExamplesTab({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+    <div className="flex-1 overflow-y-scroll px-4 py-4">
       {examples.map((ex, idx) => (
-        <div
-          key={idx}
-          className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden"
-        >
-          {/* Header */}
+        <div key={idx}>
+          {idx > 0 && <Separator />}
+
           <button
-            onClick={() => setExpanded(expanded === idx ? null : idx)}
-            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[var(--bg-elevated)] transition-colors"
+            onClick={() => setCollapsed(collapsed === idx ? null : idx)}
+            className="w-full flex items-center justify-between gap-2 mb-1.5 text-left"
           >
-            <div className="flex-shrink-0 mt-0.5">
-              <Code2 className="h-4 w-4 text-[var(--accent)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-sm font-medium text-[var(--text-primary)] truncate">{ex.title}</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] flex-shrink-0">
-                  {ex.language}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--text-muted)] leading-snug">{ex.explanation}</p>
-            </div>
-            <span className="flex-shrink-0 text-[var(--text-disabled)] text-xs ml-1">
-              {expanded === idx ? '▲' : '▼'}
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--accent)]">
+              {ex.title}
+              <span className="ml-2 font-mono normal-case tracking-normal text-[var(--text-disabled)]">{ex.language}</span>
+            </span>
+            <span className="text-[var(--text-disabled)] text-xs flex-shrink-0">
+              {collapsed === idx ? '▼' : '▲'}
             </span>
           </button>
 
-          {/* Code */}
+          <p className="text-sm text-[var(--text-secondary)] mb-2 leading-relaxed">{ex.explanation}</p>
+
           <AnimatePresence initial={false}>
-            {expanded === idx && (
+            {collapsed !== idx && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -157,13 +140,11 @@ function ExamplesTab({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="border-t border-[var(--border)]">
-                  <CodeBlock
-                    code={ex.code}
-                    lang={ex.language}
-                    className="rounded-none border-0 border-t-0"
-                  />
-                </div>
+                {/^(text|english|ukrainian|german|french|spanish|italian|portuguese|polish|japanese|chinese|korean)$/i.test(ex.language) ? (
+                  <blockquote className="pl-3 border-l-2 border-[var(--accent)] text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap italic pb-1">{ex.code}</blockquote>
+                ) : (
+                  <CodeBlock code={ex.code} lang={ex.language} />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -403,7 +384,10 @@ export default function QuestionPage() {
       <div className="flex flex-col h-dvh bg-[var(--bg-base)]">
 
         {/* ── Top bar ── */}
-        <div className="flex items-center gap-2 px-3 h-13 border-b border-[var(--border)] bg-[var(--bg-surface)] flex-shrink-0">
+        <div
+          className="flex items-center gap-2 px-3 pb-2.5 border-b border-[var(--border)] bg-[var(--bg-surface)] flex-shrink-0"
+          style={{ paddingTop: 'max(14px, env(safe-area-inset-top))' }}
+        >
           <button
             onClick={() => router.push(`/course/${courseId}`)}
             className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
@@ -485,9 +469,7 @@ export default function QuestionPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
                   >
-                    {showSeparator && (
-                      <Separator label={msg.role === 'user' ? 'You' : 'Knowix AI'} />
-                    )}
+                    {showSeparator && <Separator />}
 
                     {(isFirst || showSeparator) && (
                       <p className={cn(
@@ -577,7 +559,7 @@ export default function QuestionPage() {
                     exit={{ opacity: 0 }}
                     className="mt-2"
                   >
-                    <Separator label="Knowix AI" />
+                    <Separator />
                     <div className="flex items-center gap-1 mt-2 h-5">
                       {[0, 1, 2].map((i) => (
                         <motion.span

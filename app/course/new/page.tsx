@@ -80,7 +80,7 @@ export default function NewCoursePage() {
 
   return (
     <AppShell showNav={false}>
-      <div className="min-h-dvh flex flex-col px-4 pt-12 pb-8">
+      <div className="min-h-dvh flex flex-col px-4 pt-safe pb-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <button

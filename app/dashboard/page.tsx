@@ -38,7 +38,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="px-4 pt-12 pb-6 bg-[var(--bg-surface)] border-b border-[var(--border)]"
+          className="px-4 pb-6 pt-safe bg-[var(--bg-surface)] border-b border-[var(--border)]"
         >
           <p className="text-sm text-[var(--text-muted)] mb-1">
             {t.dashboard.greeting(firstName)}
@@ -137,8 +137,8 @@ export default function DashboardPage() {
                 return (
                   <motion.div
                     key={course.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.06 }}
                   >
                     <Card

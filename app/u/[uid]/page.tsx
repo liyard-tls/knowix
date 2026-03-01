@@ -150,7 +150,7 @@ export default function PublicProfilePage() {
     <AppShell showNav={false}>
       <div className="flex flex-col min-h-dvh">
         {/* Header */}
-        <div className="px-4 pt-12 pb-4 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+        <div className="px-4 pb-4 pt-safe bg-[var(--bg-surface)] border-b border-[var(--border)]">
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors mb-2"
