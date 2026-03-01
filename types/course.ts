@@ -9,6 +9,7 @@ export interface Question {
   difficulty: QuestionDifficulty
   xpBonus: number   // Визначається AI при генерації курсу (0-20)
   xpEarned: number  // Нараховано юзеру після відповіді (0 якщо ще не відповів)
+  score?: number    // Останній AI-рахунок (0-100), оновлюється після кожної відповіді
   order: number     // Порядок у курсі (1-50)
   createdAt: number
 }

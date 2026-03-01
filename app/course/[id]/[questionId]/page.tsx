@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Send, Zap, CheckCircle2, MinusCircle, XCircle, FlaskConical, MessageSquare, Code2, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Send, MessageSquare, Code2, Loader2, Sparkles, CheckCircle2, MinusCircle, XCircle, Zap } from 'lucide-react'
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -13,11 +13,11 @@ import { useCourse } from '@/hooks/useCourse'
 import { useStreak } from '@/hooks/useStreak'
 import { useUserContext } from '@/context'
 import { sendChatMessage, generateExamples, type ChatMessage, type CodeExample } from '@/actions/chat.actions'
-import { calculateXP } from '@/config/gamification'
+import { NoApiKeyError } from '@/lib/errors'
+import { calculateDeltaXP, scoreToStatus } from '@/config/gamification'
 import { AppShell } from '@/components/layout'
 import { CodeBlock } from '@/components/atoms'
 import { cn } from '@/lib/cn'
-import type { EvaluationResult } from '@/types'
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 
@@ -68,14 +68,6 @@ function MarkdownContent({ content, className }: { content: string; className?: 
   )
 }
 
-// ─── Status config ────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG = {
-  correct:   { icon: CheckCircle2, color: 'text-emerald-400', label: 'Correct',   accent: 'var(--success)' },
-  partial:   { icon: MinusCircle,  color: 'text-yellow-400',  label: 'Partial',   accent: 'var(--warning)' },
-  incorrect: { icon: XCircle,      color: 'text-red-400',     label: 'Incorrect', accent: 'var(--error)' },
-}
-
 // ─── Separator ────────────────────────────────────────────────────────────────
 
 function Separator() {
@@ -87,9 +79,11 @@ function Separator() {
 function ExamplesTab({
   examples,
   loading,
+  onGenerate,
 }: {
   examples: CodeExample[]
   loading: boolean
+  onGenerate: () => void
 }) {
   const [collapsed, setCollapsed] = useState<number | null>(null)
 
@@ -104,8 +98,17 @@ function ExamplesTab({
 
   if (!examples.length) {
     return (
-      <div className="flex items-center justify-center flex-1 text-sm text-[var(--text-muted)]">
-        No examples available.
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 px-6">
+        <p className="text-sm text-[var(--text-muted)] text-center">
+          Generate AI examples to help you understand this topic.
+        </p>
+        <button
+          onClick={onGenerate}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors"
+        >
+          <Sparkles className="h-4 w-4" />
+          Generate Examples
+        </button>
       </div>
     )
   }
@@ -161,8 +164,8 @@ interface StoredMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
-  isEvaluation?: boolean
-  evaluation?: Omit<EvaluationResult, 'xpEarned'>
+  score?: number      // 0-100, present on AI messages that carry a score
+  xpEarned?: number   // XP awarded for this turn
 }
 
 type Tab = 'chat' | 'examples'
@@ -184,7 +187,7 @@ export default function QuestionPage() {
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null)
+  const [noApiKey, setNoApiKey] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -209,10 +212,6 @@ export default function QuestionPage() {
         const data = snap.data() as { messages: StoredMessage[]; examples?: CodeExample[] }
         setMessages(data.messages ?? [])
         if (data.examples?.length) setExamples(data.examples)
-        const evalMsg = data.messages?.find((m) => m.isEvaluation)
-        if (evalMsg?.evaluation && question.status !== 'pending') {
-          setEvaluation({ ...evalMsg.evaluation, xpEarned: question.xpEarned })
-        }
       } else {
         const seed: StoredMessage = {
           id: 'q0',
@@ -250,107 +249,105 @@ export default function QuestionPage() {
     await setDoc(doc(db, 'chatHistory', chatDocId), { messages: safe, updatedAt: Date.now() }, { merge: true })
   }, [chatDocId])
 
-  // ── Switch tab — generate & cache examples on first open ──────────────────
-  const handleTabSwitch = useCallback(async (tab: Tab) => {
-    setActiveTab(tab)
-    if (tab !== 'examples' || examples.length > 0 || examplesLoading || !question || !chatDocId) return
-
+  // ── Generate examples on demand ────────────────────────────────────────────
+  const handleGenerateExamples = useCallback(async () => {
+    if (examples.length > 0 || examplesLoading || !question || !chatDocId) return
     setExamplesLoading(true)
     try {
       const data = await generateExamples(question.text, course?.mode ?? 'tech', profile?.geminiKeys)
       setExamples(data)
       await setDoc(doc(db, 'chatHistory', chatDocId), { examples: data }, { merge: true })
+    } catch (err) {
+      const isNoKey = err instanceof NoApiKeyError || (err instanceof Error && err.message === 'NO_API_KEY')
+      if (isNoKey) setNoApiKey(true)
     } finally {
       setExamplesLoading(false)
     }
-  }, [examples.length, examplesLoading, question, chatDocId])
+  }, [examples.length, examplesLoading, question, chatDocId, course?.mode, profile?.geminiKeys])
 
   // ── Send message ───────────────────────────────────────────────────────────
-  const send = useCallback(async (forceEvaluate = false) => {
+  const send = useCallback(async () => {
     const text = input.trim()
-    if ((!text && !forceEvaluate) || sending || !question || !course || !user) return
+    if (!text || sending || !question || !course || !user) return
 
-    const userMsg: StoredMessage | null = text ? {
+    const userMsg: StoredMessage = {
       id: `u${Date.now()}`,
       role: 'user',
       content: text,
       timestamp: Date.now(),
-    } : null
+    }
 
-    const newMessages = userMsg ? [...messages, userMsg] : messages
-    if (userMsg) setMessages(newMessages)
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
     setInput('')
     setSending(true)
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     try {
       const historyForAI: ChatMessage[] = newMessages
         .filter((m) => m.id !== 'q0')
         .map((m) => ({ role: m.role, content: m.content }))
 
-      const response = await sendChatMessage(question.text, historyForAI, forceEvaluate, course.mode ?? 'tech', profile?.geminiKeys)
+      const response = await sendChatMessage(question.text, historyForAI, false, course.mode ?? 'tech', profile?.geminiKeys)
 
-      const evalData = response.evaluation
-        ? {
-            status: response.evaluation.status,
-            score: response.evaluation.score,
-            feedback: response.evaluation.feedback,
-            codeExample: response.evaluation.codeExample === null ? undefined : response.evaluation.codeExample,
-          }
-        : undefined
+      let xpEarnedThisTurn: number | undefined
+      if (response.score >= 0) {
+        const prevScore = question.score ?? 0
+        xpEarnedThisTurn = calculateDeltaXP(prevScore, response.score, question.xpBonus ?? 0, streak)
+      }
 
       const aiMsg: StoredMessage = {
         id: `a${Date.now()}`,
         role: 'assistant',
         content: response.content,
         timestamp: Date.now(),
-        isEvaluation: response.type === 'evaluation',
-        evaluation: evalData,
+        score: response.score,
+        xpEarned: xpEarnedThisTurn,
       }
 
       const finalMessages = [...newMessages, aiMsg]
       setMessages(finalMessages)
       await saveHistory(finalMessages)
 
-      if (response.type === 'evaluation' && response.evaluation) {
-        const xpEarned = calculateXP(response.evaluation.status, question.xpBonus, streak)
-        const fullEval: EvaluationResult = { ...response.evaluation, xpEarned }
-        setEvaluation(fullEval)
-
+      // Update question status and score on every valid response
+      if (response.score >= 0) {
+        const status = scoreToStatus(response.score)
         const updatedQuestions = course.questions.map((q) =>
-          q.id === questionId ? { ...q, status: response.evaluation!.status, xpEarned } : q
+          q.id === questionId ? { ...q, status, score: response.score, xpEarned: (q.xpEarned ?? 0) + (xpEarnedThisTurn ?? 0) } : q
         )
         await updateDoc(doc(db, 'courses', courseId), {
           questions: updatedQuestions,
           updatedAt: Date.now(),
         })
-
-        await addXP(xpEarned)
-        await updateStreak()
+        // Award incremental XP (0 if score didn't improve)
+        if (xpEarnedThisTurn && xpEarnedThisTurn > 0) {
+          await addXP(xpEarnedThisTurn)
+          await updateStreak()
+        }
       }
     } catch (err) {
-      console.error('chat send failed:', err)
-      const errMsg: StoredMessage = {
-        id: `err${Date.now()}`,
-        role: 'assistant',
-        content: 'Something went wrong. Please try again.',
-        timestamp: Date.now(),
+      const isNoKey = err instanceof NoApiKeyError || (err instanceof Error && err.message === 'NO_API_KEY')
+      if (isNoKey) {
+        setNoApiKey(true)
+      } else {
+        console.error('chat send failed:', err)
+        const errMsg: StoredMessage = {
+          id: `err${Date.now()}`,
+          role: 'assistant',
+          content: 'Something went wrong. Please try again.',
+          timestamp: Date.now(),
+        }
+        const finalMessages = [...newMessages, errMsg]
+        setMessages(finalMessages)
+        await saveHistory(finalMessages)
       }
-      const finalMessages = [...newMessages, errMsg]
-      setMessages(finalMessages)
-      await saveHistory(finalMessages)
     } finally {
       setSending(false)
     }
   }, [input, sending, question, course, user, messages, courseId, questionId, streak, addXP, updateStreak, saveHistory])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      send()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -375,8 +372,6 @@ export default function QuestionPage() {
       </AppShell>
     )
   }
-
-  const hasEvaluation = evaluation !== null
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -427,7 +422,7 @@ export default function QuestionPage() {
             return (
               <button
                 key={tab}
-                onClick={() => handleTabSwitch(tab)}
+                onClick={() => setActiveTab(tab)}
                 className={cn(
                   'flex items-center gap-1.5 px-4 h-10 text-xs font-medium transition-colors relative',
                   isActive
@@ -451,7 +446,7 @@ export default function QuestionPage() {
 
         {/* ── Tab content ── */}
         {activeTab === 'examples' ? (
-          <ExamplesTab examples={examples} loading={examplesLoading} />
+          <ExamplesTab examples={examples} loading={examplesLoading} onGenerate={handleGenerateExamples} />
         ) : (
           <>
             {/* ── Chat messages ── */}
@@ -483,68 +478,37 @@ export default function QuestionPage() {
                     )}
 
                     <div className="mb-1">
-                      {msg.isEvaluation && msg.evaluation ? (() => {
-                        const cfg = STATUS_CONFIG[msg.evaluation.status]
-                        const Icon = cfg.icon
+                      {/* Score result card — shown above AI reply when a valid score exists */}
+                      {msg.role === 'assistant' && msg.score !== undefined && msg.score >= 0 && (() => {
+                        const s = msg.score
+                        const isCorrect = s >= 80
+                        const isPartial = s >= 40
+                        const statusColor = isCorrect ? 'text-emerald-400' : isPartial ? 'text-yellow-400' : 'text-red-400'
+                        const label = isCorrect ? 'Correct' : isPartial ? 'Partial' : 'Incorrect'
+                        const Icon = isCorrect ? CheckCircle2 : isPartial ? MinusCircle : XCircle
                         return (
-                          <div className="mb-3">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Icon className={cn('h-4 w-4', cfg.color)} />
-                              <span className={cn('text-sm font-semibold', cfg.color)}>{cfg.label}</span>
-                              <span className="text-xs text-[var(--text-disabled)]">
-                                {msg.evaluation.score}/100
+                          <div className="mb-2 flex items-center gap-2">
+                            <Icon className={cn('h-5 w-5 flex-shrink-0', statusColor)} />
+                            <span className={cn('text-base font-semibold', statusColor)}>{label}</span>
+                            <span className="text-sm tabular-nums text-[var(--text-muted)]">{s}/100</span>
+                            {msg.xpEarned !== undefined && !isNaN(msg.xpEarned) && (
+                              <span className="ml-auto flex items-center gap-1 text-sm font-semibold text-yellow-400">
+                                <Zap className="h-4 w-4" />
+                                +{msg.xpEarned} XP
                               </span>
-                              {evaluation?.xpEarned && (
-                                <div className="flex items-center gap-1 ml-auto text-yellow-400">
-                                  <Zap className="h-3 w-3" />
-                                  <span className="text-xs font-semibold">+{evaluation.xpEarned} XP</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <MarkdownContent
-                              content={msg.evaluation.feedback}
-                              className="text-sm text-[var(--text-secondary)]"
-                            />
-
-                            {msg.evaluation.codeExample && (
-                              <CodeBlock
-                                code={msg.evaluation.codeExample}
-                                lang="typescript"
-                                className="mt-3"
-                              />
                             )}
-
-                            <div className="flex items-center gap-2 mt-4">
-                              {nextQuestion ? (
-                                <button
-                                  onClick={() => router.push(`/course/${courseId}/${nextQuestion.id}`)}
-                                  className="flex items-center gap-1.5 text-xs font-medium text-[var(--accent)] hover:underline"
-                                >
-                                  Next question <ArrowRight className="h-3 w-3" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => router.push(`/course/${courseId}`)}
-                                  className="text-xs font-medium text-[var(--accent)] hover:underline"
-                                >
-                                  Back to course ✓
-                                </button>
-                              )}
-                            </div>
                           </div>
                         )
-                      })() : (
-                        <MarkdownContent
-                          content={msg.content}
-                          className={cn(
-                            'text-sm',
-                            msg.role === 'user'
-                              ? 'text-[var(--text-primary)]'
-                              : 'text-[var(--text-secondary)]'
-                          )}
-                        />
-                      )}
+                      })()}
+                      <MarkdownContent
+                        content={msg.content}
+                        className={cn(
+                          'text-sm',
+                          msg.role === 'user'
+                            ? 'text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)]'
+                        )}
+                      />
                     </div>
                   </motion.div>
                 )
@@ -577,43 +541,33 @@ export default function QuestionPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* ── Input area ── */}
-            <div className={cn(
-              'flex-shrink-0 border-t border-[var(--border)] bg-[var(--bg-surface)]'
-            )}>
-              {/* Evaluate bar */}
-              {!hasEvaluation && (
-                <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
-                  <span className="text-xs text-[var(--text-disabled)]">
-                    When ready — evaluate your answer
-                  </span>
-                  <button
-                    onClick={() => send(true)}
-                    disabled={sending}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 h-7 rounded-[var(--radius-md)]',
-                      'text-xs font-medium transition-all border',
-                      sending
-                        ? 'opacity-30 pointer-events-none border-[var(--border)] text-[var(--text-muted)]'
-                        : 'border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]'
-                    )}
-                  >
-                    <FlaskConical className="h-3 w-3" />
-                    Evaluate
-                  </button>
-                </div>
-              )}
+            {/* ── No API key banner ── */}
+            {noApiKey && (
+              <div className="flex-shrink-0 mx-4 mb-3 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <p className="text-xs text-[var(--text-secondary)] mb-1">
+                  <span className="font-semibold text-[var(--text-primary)]">Knowix AI needs a Gemini API key</span> to answer your questions.
+                  Add your free key in Settings to continue learning.
+                </p>
+                <button
+                  onClick={() => router.push('/settings')}
+                  className="text-xs font-medium text-[var(--accent)] hover:underline"
+                >
+                  Go to Settings →
+                </button>
+              </div>
+            )}
 
-              {/* Input row */}
+            {/* ── Input area ── */}
+            <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--bg-surface)]">
               <div className="flex items-end gap-2 px-4 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))]">
                 <textarea
                   ref={textareaRef}
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={hasEvaluation ? 'Ask a follow-up…' : 'Type your answer…'}
+                  placeholder={noApiKey ? 'Add Gemini API key in Settings to continue…' : 'Type your answer…'}
                   rows={1}
-                  disabled={sending}
+                  disabled={sending || noApiKey}
                   className={cn(
                     'flex-1 resize-none px-3 py-2.5 rounded-[var(--radius-lg)]',
                     'bg-[var(--bg-input)] border border-[var(--border)]',
@@ -623,10 +577,8 @@ export default function QuestionPage() {
                   )}
                   style={{ minHeight: '42px' }}
                 />
-
-                {/* Send button */}
                 <button
-                  onClick={() => send(false)}
+                  onClick={send}
                   disabled={!input.trim() || sending}
                   className={cn(
                     'flex-shrink-0 h-[42px] w-[42px] flex items-center justify-center',

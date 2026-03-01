@@ -104,68 +104,71 @@ Return ONLY a valid JSON array, no markdown, no explanation:
   },
 
   /**
-   * Основний промпт чату. Два режими в одному:
-   * 1. Якщо юзер ще не дав відповіді — продовжуй розмову, уточнюй, підказуй напрямок
-   * 2. Якщо відповідь дана і вказано forceEvaluate=true, або якщо відповідь досить повна — оціни
+   * Основний промпт чату.
+   * AI відповідає conversationally після кожного повідомлення юзера,
+   * і ЗАВЖДИ повертає оновлений score (0-100) з урахуванням всієї розмови.
    *
-   * При оцінці повертає JSON-блок. При звичайній відповіді — markdown текст.
+   * Відповідь завжди у форматі:
+   * {"SCORE":<0-100>,"REPLY":"<markdown text>"}
    */
   chat: (
     question: string,
     history: Array<{ role: "user" | "assistant"; content: string }>,
-    forceEvaluate: boolean,
+    _forceEvaluate: boolean,
     mode: CourseMode = "tech",
   ) => {
     const historyText = history
       .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
       .join("\n");
 
-    const evalGuidelines: Record<CourseMode, string> = {
-      tech: `- "correct" = 80-100: covers key concepts well
-- "partial" = 40-79: good points but missing important aspects
-- "incorrect" = 0-39: fundamentally wrong or very incomplete
-- Feedback: use **bold** for important terms, bullet points for multiple items, inline \`code\` for identifiers
-- codeExample: concise illustrative code (under 20 lines), or null`,
+    const scoreGuidelines: Record<CourseMode, string> = {
+      tech: `Score guidelines (cumulative across the whole conversation):
+- 80-100: covers key concepts well, correct and complete
+- 40-79: good points but missing important aspects or has minor errors
+- 0-39: fundamentally wrong, very incomplete, or hasn't really answered yet`,
 
-      language: `- "correct" = 80-100: grammatically accurate, natural, good vocabulary
-- "partial" = 40-79: understandable but with notable grammar/vocabulary issues
-- "incorrect" = 0-39: significant errors that impede understanding
-- Feedback: highlight grammar errors with **bold**, show the corrected version, explain the rule briefly
-- codeExample: null (never include code for language questions)`,
+      language: `Score guidelines (cumulative across the whole conversation):
+- 80-100: grammatically accurate, natural, good vocabulary use
+- 40-79: understandable but notable grammar/vocabulary issues
+- 0-39: significant errors that impede understanding, or no real attempt`,
 
-      general: `- "correct" = 80-100: demonstrates solid understanding with good reasoning
-- "partial" = 40-79: partially correct but missing key aspects or depth
-- "incorrect" = 0-39: fundamentally wrong or very superficial
-- Feedback: use **bold** for key concepts, bullet points for multiple items
-- codeExample: null unless the topic explicitly involves code`,
+      general: `Score guidelines (cumulative across the whole conversation):
+- 80-100: demonstrates solid understanding with good reasoning
+- 40-79: partially correct but missing key aspects or depth
+- 0-39: fundamentally wrong, very superficial, or hasn't really answered`,
     };
 
-    return `You are evaluating a learner's understanding of this question:
+    const replyGuidelines: Record<CourseMode, string> = {
+      tech: `- Use **bold** for key terms, inline \`code\` for identifiers
+- If the answer is incomplete: ask about the missing concept (one short question)
+- If the answer is solid: confirm what's right and add one useful insight or clarification
+- NEVER ask the user to write or type code — they are on mobile`,
+      language: `- Highlight errors with **bold**, show the corrected version
+- If the answer is incomplete: prompt for the missing part
+- If the answer is solid: confirm and add a natural usage tip`,
+      general: `- Use **bold** for key concepts, bullet points for multiple items
+- If the answer is incomplete: ask about the missing aspect (one short question)
+- If the answer is solid: confirm and add a key insight`,
+    };
+
+    return `You are helping a learner understand this question:
 "${question}"
 
 Conversation so far:
 ${historyText || "(no messages yet)"}
 
-${
-  forceEvaluate
-    ? `The user has explicitly requested evaluation. Evaluate their answer now.`
-    : `Decide: does the user's latest message contain a substantive answer to the question?
-- If the question asks about multiple distinct concepts (e.g. "difference between X, Y, and Z") and the user only addressed some of them: ask briefly about the missing ones before evaluating. Keep it short — one sentence max.
-- If YES (they answered all key parts, even partially): evaluate it immediately.
-- If NO (they asked a clarifying question, want hints, or haven't started answering): reply conversationally in markdown.`
-}
+Your task:
+1. Read the FULL conversation and score the learner's cumulative understanding from 0 to 100.
+2. Reply conversationally: guide them if incomplete, confirm and enrich if solid.
 
-When evaluating, return ONLY this JSON (no markdown wrapper, no explanation):
-{"EVAL":{"status":"correct"|"partial"|"incorrect","score":<0-100>,"feedback":"<markdown: use **bold** for key points, bullet lists>","codeExample":"<code string or null>"}}
+${scoreGuidelines[mode]}
 
-Evaluation guidelines:
-${evalGuidelines[mode]}
+Reply guidelines:
+${replyGuidelines[mode]}
 
-When NOT evaluating, respond in markdown with clear structure:
-- Use **bold** for key terms
-- Use bullet lists for multiple points
-- Be concise but thorough
-- NEVER ask the user to write or type code examples — they are on mobile`.trim();
+CRITICAL: Return ONLY valid JSON. No markdown fences, no text before or after.
+Escape all double quotes inside REPLY with \". Escape newlines with \n.
+{"SCORE":<0-100>,"REPLY":"<your markdown response>"}`.trim();
   },
 
   /**

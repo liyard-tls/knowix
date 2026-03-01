@@ -33,6 +33,16 @@ export function getStreakMultiplier(currentStreak: number): number {
 }
 
 /**
+ * Converts a 0-100 score to a QuestionStatus.
+ * 80-100 → correct, 40-79 → partial, 0-39 → incorrect
+ */
+export function scoreToStatus(score: number): 'correct' | 'partial' | 'incorrect' {
+  if (score >= 80) return 'correct'
+  if (score >= 40) return 'partial'
+  return 'incorrect'
+}
+
+/**
  * Повна формула нарахування XP:
  * totalXP = Math.round(XP_BASE[status] * streakMultiplier) + question.xpBonus
  */
@@ -44,6 +54,29 @@ export function calculateXP(
   const base = XP_BASE[status]
   const multiplier = getStreakMultiplier(currentStreak)
   return Math.round(base * multiplier) + xpBonus
+}
+
+/**
+ * Calculates incremental XP based on score delta.
+ * XP is proportional to score improvement: delta/100 * max possible XP.
+ * Returns 0 if score didn't improve.
+ *
+ * previousScore — last AI score for this question (0-100), or 0 if first attempt
+ * newScore      — current AI score (0-100)
+ * xpBonus       — per-question bonus set by AI
+ * currentStreak — for streak multiplier
+ */
+export function calculateDeltaXP(
+  previousScore: number,
+  newScore: number,
+  xpBonus: number,
+  currentStreak: number
+): number {
+  const delta = newScore - previousScore
+  if (delta <= 0) return 0
+  const status = scoreToStatus(newScore)
+  const maxXP = calculateXP(status, xpBonus, currentStreak)
+  return Math.round(maxXP * (delta / 100))
 }
 
 // Бонус за завершення щоденної сесії (5 питань за день)

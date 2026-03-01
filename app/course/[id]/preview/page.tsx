@@ -86,13 +86,13 @@ export default function CoursePreviewPage() {
       const ref = await addDoc(collection(db, 'courses'), {
         userId: user.uid,
         title: course.title,
-        description: course.description,
-        mode: course.mode,
-        questions: course.questions.map((q) => ({
+        description: course.description ?? '',
+        mode: course.mode ?? 'general',
+        questions: course.questions.map((q) => JSON.parse(JSON.stringify({
           ...q,
           status: 'pending',
           xpEarned: 0,
-        })),
+        }))),
         isPublic: false,
         authorName: user.displayName ?? '',
         authorPhotoURL: user.photoURL ?? null,
