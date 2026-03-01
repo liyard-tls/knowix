@@ -1,21 +1,23 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/atoms'
 import { t } from '@/lib/i18n'
 
-export default function LoginPage() {
+function LoginContent() {
   const { user, loading, signIn } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') ?? '/dashboard'
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/dashboard')
+      router.push(next)
     }
-  }, [user, loading, router])
+  }, [user, loading, router, next])
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-6 bg-[var(--bg-base)]">
@@ -75,5 +77,13 @@ export default function LoginPage() {
         </p>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }

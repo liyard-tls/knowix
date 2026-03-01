@@ -41,11 +41,6 @@ export default function PublicProfilePage() {
   const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  // Auth guard
-  useEffect(() => {
-    if (!authLoading && !user) router.push('/login')
-  }, [user, authLoading, router])
-
   // Redirect if own profile
   useEffect(() => {
     if (user && uid === user.uid) router.replace('/profile')
@@ -65,7 +60,12 @@ export default function PublicProfilePage() {
     return () => { cancelled = true }
   }, [uid])
 
-  // Determine relationship state
+  // When auth resolves and user is not logged in, set relation to 'none' so UI doesn't stay in skeleton
+  useEffect(() => {
+    if (!authLoading && !user) setRelation('none')
+  }, [authLoading, user])
+
+  // Determine relationship state (only when logged in)
   useEffect(() => {
     if (!user || !myProfile || !uid || profileLoading) return
     let cancelled = false
@@ -109,7 +109,7 @@ export default function PublicProfilePage() {
   }, [user, myProfile, uid, profileLoading])
 
   const handleAddFriend = useCallback(async () => {
-    if (!user) return
+    if (!user) { router.push(`/login?next=/u/${uid}`); return }
     setActionLoading(true)
     try {
       await sendFriendRequest(user.uid, uid)
@@ -140,8 +140,6 @@ export default function PublicProfilePage() {
       setActionLoading(false)
     }
   }, [user, uid])
-
-  if (authLoading || !user) return null
 
   const level = targetProfile ? getLevelByXP(targetProfile.xp) : null
   const progress = targetProfile ? getXPProgress(targetProfile.xp) : null

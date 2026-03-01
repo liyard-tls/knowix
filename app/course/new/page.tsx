@@ -67,6 +67,10 @@ export default function NewCoursePage() {
         mode,
         questions,
         isPublic: false,
+        authorName: user.displayName ?? '',
+        authorPhotoURL: user.photoURL ?? null,
+        likes: 0,
+        forkCount: 0,
         createdAt: now,
         updatedAt: now,
       }

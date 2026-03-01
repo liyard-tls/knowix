@@ -17,10 +17,16 @@ export interface Course {
   id: string
   userId: string
   title: string
-  description: string  // Оригінальний запит юзера
-  mode: CourseMode     // Режим курсу — впливає на промпти AI
+  description: string      // Оригінальний запит юзера
+  mode: CourseMode         // Режим курсу — впливає на промпти AI
   questions: Question[]
-  isPublic: boolean    // true — курс видимий іншим юзерам (sharing)
+  isPublic: boolean        // true — курс видимий іншим юзерам (sharing)
+  authorName?: string      // displayName юзера-автора (денормалізовано)
+  authorPhotoURL?: string | null  // photoURL юзера-автора (денормалізовано)
+  likes?: number           // кількість лайків
+  likedBy?: string[]       // масив uid юзерів, що лайкнули
+  forkCount?: number       // кількість юзерів, які додали курс до себе
+  forkedFrom?: string      // id оригінального курсу (якщо це форк)
   createdAt: number
   updatedAt: number
   completedAt?: number

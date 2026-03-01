@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, Circle, Flame, Zap, Trash2 } from 'lucide-react'
-import { doc, deleteDoc } from 'firebase/firestore'
+import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, Circle, Flame, Zap, MoreVertical, Share2, Globe, Trash2 } from 'lucide-react'
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useCourse } from '@/hooks/useCourse'
@@ -42,8 +42,23 @@ export default function CoursePage() {
   const { course, loading: courseLoading } = useCourse(id)
   const { current: streak } = useStreak()
   const { xp, level } = useXP()
+  const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [sharingToggling, setSharingToggling] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
@@ -107,6 +122,40 @@ export default function CoursePage() {
     router.push(`/course/${id}/${q.id}`)
   }
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/course/${id}/preview`
+    setMenuOpen(false)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: course?.title ?? 'Course', url })
+      } catch {
+        // user cancelled or error — ignore
+      }
+    } else {
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    }
+  }
+
+  const handleTogglePublish = async () => {
+    if (!course || sharingToggling) return
+    setMenuOpen(false)
+    setSharingToggling(true)
+    try {
+      const newIsPublic = !course.isPublic
+      await updateDoc(doc(db, 'courses', id), {
+        isPublic: newIsPublic,
+        authorName: user?.displayName ?? '',
+        authorPhotoURL: user?.photoURL ?? null,
+        likes: course.likes ?? 0,
+        forkCount: course.forkCount ?? 0,
+      })
+    } finally {
+      setSharingToggling(false)
+    }
+  }
+
   return (
     <AppShell showNav={false}>
       <div className="flex flex-col min-h-dvh">
@@ -122,19 +171,60 @@ export default function CoursePage() {
             <h1 className="text-base font-semibold text-[var(--text-primary)] line-clamp-2 flex-1">
               {course.title}
             </h1>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className={cn(
-                'flex-shrink-0 p-2 rounded-[var(--radius-md)] transition-colors',
-                confirmDelete
-                  ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
-                  : 'text-[var(--text-disabled)] hover:bg-[var(--bg-elevated)] hover:text-red-400'
-              )}
-              title={confirmDelete ? 'Tap again to confirm delete' : 'Delete course'}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {/* 3-dot context menu */}
+            <div className="relative flex-shrink-0" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="p-2 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-[var(--shadow-md)] overflow-hidden"
+                  >
+                    {/* Share */}
+                    <button
+                      onClick={handleShare}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+                    >
+                      <Share2 className="h-4 w-4 text-[var(--text-muted)]" />
+                      {shareCopied ? 'Copied!' : 'Share'}
+                    </button>
+
+                    {/* Publish */}
+                    <button
+                      onClick={handleTogglePublish}
+                      disabled={sharingToggling}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-input)]"
+                    >
+                      <Globe className={cn('h-4 w-4', course.isPublic ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]')} />
+                      <span className={course.isPublic ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]'}>
+                        {course.isPublic ? 'Unpublish' : 'Publish'}
+                      </span>
+                    </button>
+
+                    <div className="h-px bg-[var(--border)]" />
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => { setMenuOpen(false); handleDelete() }}
+                      disabled={deleting}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deleting ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Delete confirmation banner */}
@@ -148,15 +238,23 @@ export default function CoursePage() {
               >
                 <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] bg-red-500/10 border border-red-500/20">
                   <p className="text-xs text-red-400">
-                    {deleting ? 'Deleting…' : 'Tap the trash icon again to confirm'}
+                    {deleting ? 'Deleting…' : 'Delete this course?'}
                   </p>
                   {!deleting && (
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] ml-3"
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex items-center gap-3 ml-3">
+                      <button
+                        onClick={handleDelete}
+                        className="text-xs font-medium text-red-400 hover:text-red-300"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -228,12 +326,15 @@ export default function CoursePage() {
                 )}
               >
                 <div className="flex items-start gap-3">
+                  {/* Status icon */}
                   <div className="flex-shrink-0 mt-0.5">{STATUS_ICON[q.status]}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] text-[var(--text-disabled)] font-mono">
-                        #{q.order}
-                      </span>
+                  {/* Right column: number + text inline, difficulty+XP below */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <p className="text-sm text-[var(--text-primary)] line-clamp-2 leading-snug">
+                      <span className="text-[var(--text-disabled)] mr-1.5">{q.order}.</span>
+                      {q.text}
+                    </p>
+                    <div className="flex items-center gap-2">
                       <span className={cn(
                         'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
                         DIFFICULTY_BADGE[q.difficulty]
@@ -246,9 +347,6 @@ export default function CoursePage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-[var(--text-primary)] line-clamp-2 leading-snug">
-                      {q.text}
-                    </p>
                   </div>
                 </div>
               </button>

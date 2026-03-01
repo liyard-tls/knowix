@@ -9,6 +9,7 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  limit,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from './useAuth'
@@ -65,4 +66,27 @@ export function useCourse(courseId: string) {
   }, [courseId])
 
   return { course, loading }
+}
+
+export function usePublicCourses(maxItems = 20) {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'courses'),
+      where('isPublic', '==', true),
+      limit(maxItems)
+    )
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Course))
+      setCourses(data)
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [maxItems])
+
+  return { courses, loading }
 }

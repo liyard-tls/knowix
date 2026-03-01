@@ -168,6 +168,22 @@ export const en = {
     },
     myCoursesSection: 'My Courses',
     exploreSection: 'Explore',
+    explore: {
+      empty: 'No public courses yet. Be the first to share one!',
+      likes: (n: number) => `${n}`,
+      forks: (n: number) => `${n}`,
+      makePublic: 'Share publicly',
+      makePrivate: 'Make private',
+      fork: 'Add to my courses',
+      forked: 'Added',
+      questionsCount: (n: number) => `${n} questions`,
+      learners: (n: number) => `${n} learner${n === 1 ? '' : 's'}`,
+      join: 'Join Course',
+      alreadyJoined: 'Open My Copy',
+      goToCourse: 'Go to Course',
+      like: 'Like',
+      liked: 'Liked',
+    },
   },
 
   profile: {

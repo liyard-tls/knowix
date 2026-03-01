@@ -128,7 +128,13 @@ export default function DashboardPage() {
             </motion.div>
           ) : (
             <div className="flex flex-col gap-3">
-              {courses.map((course, i) => {
+              {[...courses]
+                .sort((a, b) => {
+                  const aDone = a.questions.filter((q) => q.status !== "pending").length;
+                  const bDone = b.questions.filter((q) => q.status !== "pending").length;
+                  return bDone - aDone;
+                })
+                .map((course, i) => {
                 const total = course.questions.length;
                 const done = course.questions.filter(
                   (q) => q.status !== "pending",
