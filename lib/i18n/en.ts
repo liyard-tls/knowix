@@ -158,6 +158,47 @@ export const en = {
       rateLimited: 'Rate limited',
     },
   },
+
+  courses: {
+    title: 'Courses',
+    wip: {
+      title: 'Coming Soon',
+      description: 'Browse and discover courses created by other learners. Share your knowledge and explore new topics.',
+      badge: 'Work in Progress',
+    },
+    myCoursesSection: 'My Courses',
+    exploreSection: 'Explore',
+  },
+
+  profile: {
+    title: 'Profile',
+    signOut: 'Sign Out',
+    editProfile: 'Edit Profile',
+    joinedLabel: 'Joined',
+    statsSection: 'Your Stats',
+    coursesSection: 'My Courses',
+    coursesCount: (n: number) => `${n} ${n === 1 ? 'course' : 'courses'}`,
+    questionsAnswered: (n: number) => `${n} questions answered`,
+    memberSince: (date: string) => `Member since ${date}`,
+  },
+
+  friends: {
+    title: 'Friends',
+    copyLink: 'Copy My Link',
+    linkCopied: 'Link copied!',
+    addFriend: 'Add Friend',
+    requestSent: 'Request Sent',
+    alreadyFriends: 'Friends ✓',
+    acceptRequest: 'Accept Request',
+    incomingRequests: 'Friend Requests',
+    accept: 'Accept',
+    decline: 'Decline',
+    remove: 'Remove Friend',
+    empty: {
+      title: 'No friends yet',
+      description: 'Copy your profile link and share it with people you know',
+    },
+  },
 } as const
 
 export type Translations = typeof en

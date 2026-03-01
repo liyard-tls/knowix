@@ -13,5 +13,17 @@ export interface UserProfile {
   xp: number
   level: number
   streak: UserStreak
-  achievements: string[] // масив id розблокованих досягнень
+  achievements: string[]    // масив id розблокованих досягнень
+  friends?: string[]        // accepted friend uids
+  friendRequestsIn?: string[] // pending incoming request uids
+}
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'declined'
+
+export interface FriendRequest {
+  id: string
+  from: string   // uid
+  to: string     // uid
+  status: FriendRequestStatus
+  createdAt: number
 }
